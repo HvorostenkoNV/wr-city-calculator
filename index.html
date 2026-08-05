@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>City Calculator — W&R Soviet Republic</title>
+<meta name="description" content="City planning calculator for Workers & Resources: Soviet Republic. Enter industrial workplaces — get flats, population, water, shops, pubs, schools and more, with build presets.">
+<meta property="og:title" content="City Calculator — W&R: Soviet Republic">
+<meta property="og:description" content="Enter industrial workplaces — get flats, population and every city service sized for you. Editable empirical coefficients.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#EDE4CB">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23EDE4CB' width='100' height='100'/%3E%3Cpath fill='%23A6342A' d='M50 12 L59.5 37 L86 37 L64.5 52.5 L72.5 79 L50 63 L27.5 79 L35.5 52.5 L14 37 L40.5 37 Z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDE4CB;
+    --paper-deep:#E3D8BA;
+    --ink:#2B241A;
+    --ink-soft:#5A4F3C;
+    --rule:#B9AA85;
+    --red:#A6342A;
+    --red-deep:#7E241C;
+    --ok:#3E6B2F;
+    --warn:#A8790A;
+    --danger:#A6342A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px}
+  body{
+    background:var(--paper-deep);
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(255,255,255,.35), transparent 55%),
+      radial-gradient(ellipse at 85% 90%, rgba(90,79,60,.12), transparent 50%);
+    color:var(--ink);
+    font-family:'PT Serif',serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 56px;
+  }
+  .doc{
+    width:100%;
+    max-width:680px;
+    background:var(--paper);
+    border:1px solid var(--rule);
+    box-shadow:0 8px 40px rgba(43,36,26,.25);
+    position:relative;
+  }
+  .doc::before{
+    content:"";
+    position:absolute;
+    left:22px;top:0;bottom:0;
+    width:1px;
+    background:repeating-linear-gradient(to bottom, var(--red) 0 14px, transparent 14px 26px);
+    opacity:.35;
+  }
+  .inner{padding:28px 38px 34px 54px}
+
+  header{border-bottom:3px double var(--ink);padding-bottom:14px}
+  .agency{
+    font-family:'PT Mono',monospace;
+    font-size:.7rem;
+    letter-spacing:.18em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
+  }
+  h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:clamp(1.4rem,4.5vw,1.9rem);
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin-top:8px;
+    line-height:1.15;
+  }
+  h1 .num{color:var(--red)}
+
+  .input-block{margin:20px 0 4px}
+  .field-label{
+    font-family:'Oswald',sans-serif;
+    font-size:.8rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    display:block;
+    margin-bottom:8px;
+  }
+  .field-label b{color:var(--red);font-weight:600}
+  .workers-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  input[type="number"]{
+    font-family:'PT Mono',monospace;
+    font-size:1.7rem;
+    width:170px;
+    padding:5px 12px;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid var(--ink);
+    color:var(--ink);
+    outline:none;
+  }
+  input[type="number"]:focus{border-bottom-color:var(--red)}
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield;appearance:textfield}
+  input[type="range"]{flex:1;min-width:160px;accent-color:var(--red);height:4px}
+
+  /* global settings line (load bands) */
+  .settings-line{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:14px;
+    font-family:'PT Mono',monospace;
+    font-size:.75rem;
+    color:var(--ink-soft);
+  }
+  .settings-line .lbl{
+    font-family:'Oswald',sans-serif;
+    font-size:.72rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+
+  .block{
+    border:1px solid var(--ink);
+    margin-top:26px;
+    padding:14px 18px 16px;
+    position:relative;
+    background:rgba(255,255,255,.18);
+  }
+  .block-title{
+    position:absolute;
+    top:-11px;left:14px;
+    background:var(--paper);
+    padding:0 10px;
+    font-family:'Oswald',sans-serif;
+    font-size:.8rem;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+  }
+
+  .chain{
+    font-family:'PT Mono',monospace;
+    font-size:.75rem;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    padding-bottom:10px;
+    border-bottom:1px dashed var(--rule);
+  }
+  .chain .op{color:var(--red);font-weight:bold}
+  input.coef{
+    font-family:'PT Mono',monospace;
+    font-size:.78rem;
+    width:52px;
+    border:none;
+    border-bottom:1px solid var(--rule);
+    background:transparent;
+    color:var(--ink);
+    text-align:center;
+    outline:none;
+  }
+  input.coef:focus{border-bottom-color:var(--red)}
+  input.coef.band{width:36px}
+
+  .types-line{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:10px 0;
+    border-bottom:1px dashed var(--rule);
+    font-family:'PT Mono',monospace;
+    font-size:.75rem;
+    color:var(--ink-soft);
+  }
+  .types-line .lbl{
+    font-family:'Oswald',sans-serif;
+    font-size:.72rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+  .type-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:2px;
+    border:1px solid var(--rule);
+    background:rgba(255,255,255,.4);
+    padding:2px 4px 2px 8px;
+  }
+  .type-chip input{
+    font-family:'PT Mono',monospace;
+    font-size:.82rem;
+    width:52px;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    text-align:center;
+    outline:none;
+  }
+  .type-chip input:focus{color:var(--red)}
+  .type-chip button{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-size:.9rem;
+    line-height:1;
+    cursor:pointer;
+    padding:2px 5px;
+  }
+  .type-chip button:hover{color:var(--red)}
+  .add-type{
+    border:1px dashed var(--ink-soft);
+    background:none;
+    color:var(--ink-soft);
+    font-family:'PT Mono',monospace;
+    font-size:.75rem;
+    padding:3px 10px;
+    cursor:pointer;
+  }
+  .add-type:hover{color:var(--red);border-color:var(--red)}
+
+  .row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:10px 0 8px;
+    border-bottom:1px solid var(--rule);
+    gap:14px;
+  }
+  .row:last-child{border-bottom:none;padding-bottom:2px}
+  .row .name{font-size:.95rem}
+  .row .name small{
+    display:block;
+    font-size:.72rem;
+    font-style:italic;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  .row .val{
+    font-family:'PT Mono',monospace;
+    font-size:1.6rem;
+    letter-spacing:.02em;
+    white-space:nowrap;
+  }
+  .row.main .val{color:var(--red);font-size:1.9rem}
+  .row.main .name{font-weight:700}
+  .val.status{font-size:1.35rem}
+
+  /* variant preset rows */
+  .row.variant{padding:8px 0 6px}
+  .row.variant .name{
+    font-family:'Oswald',sans-serif;
+    font-size:.78rem;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .row.variant .name small{
+    font-family:'PT Mono',monospace;
+    text-transform:none;
+    letter-spacing:0;
+  }
+  .row.variant .val{font-size:1.15rem}
+  .row.variant .val .load{
+    font-size:.78rem;
+    margin-left:10px;
+  }
+
+  .gauge-wrap{margin-top:10px}
+  .gauge{
+    height:8px;
+    border:1px solid var(--ink);
+    background:rgba(255,255,255,.4);
+    position:relative;
+  }
+  .gauge .fill{
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:0%;
+    background:var(--ok);
+    transition:width .2s ease, background-color .2s ease;
+  }
+  .gauge-legend{
+    display:flex;
+    justify-content:space-between;
+    font-family:'PT Mono',monospace;
+    font-size:.7rem;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+  .gauge-legend .util{font-weight:bold}
+
+  .stamp-zone{
+    margin-top:26px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .note{
+    font-size:.74rem;
+    font-style:italic;
+    color:var(--ink-soft);
+    max-width:360px;
+    line-height:1.45;
+  }
+  .doc-link{color:var(--red-deep)}
+  .doc-link:hover{color:var(--red)}
+  .stamp{
+    font-family:'Oswald',sans-serif;
+    font-weight:500;
+    text-transform:uppercase;
+    letter-spacing:.22em;
+    font-size:.75rem;
+    color:var(--red-deep);
+    border:2.5px solid var(--red-deep);
+    border-radius:4px;
+    padding:7px 16px 6px;
+    transform:rotate(-6deg);
+    opacity:.75;
+    user-select:none;
+  }
+  @media (max-width:520px){
+    .inner{padding:24px 16px 30px 32px}
+    .row .val{font-size:1.3rem}
+    .row.main .val{font-size:1.5rem}
+    .val.status{font-size:1.05rem}
+  }
+</style>
+</head>
+<body>
+<main class="doc">
+  <div class="inner">
+    <header>
+      <div class="agency">
+        <span>Gosplan · Settlement Dept.</span>
+        <span>Form No. G-1</span>
+      </div>
+      <h1>City Calculator — W&amp;R: Soviet Republic</h1>
+    </header>
+
+    <section class="input-block">
+      <label class="field-label" for="workers">Industrial workplaces — <b>input</b></label>
+      <div class="workers-row">
+        <input type="number" id="workers" value="1000" min="0" step="10" inputmode="numeric">
+        <input type="range" id="workersRange" min="0" max="10000" step="50" value="1000" aria-label="Workplaces (slider)">
+      </div>
+      <div class="settings-line">
+        <span class="lbl">Load bands:</span>
+        <span>green &lt;</span>
+        <input class="coef band" id="bandYellow" value="85" inputmode="numeric" title="Yellow starts at this load, %">
+        <span>% ≤ yellow ≤</span>
+        <input class="coef band" id="bandRed" value="93" inputmode="numeric" title="Red starts above this load, %">
+        <span>% &lt; red</span>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2 class="block-title">Housing &amp; Population</h2>
+      <div class="chain">
+        <span>workplaces</span><span class="op">×</span>
+        <input class="coef" id="kFlats" value="5.5" inputmode="decimal" title="Flats per workplace">
+        <span class="op">=</span><span>flats</span><span class="op">×</span>
+        <input class="coef" id="kPop" value="1.6" inputmode="decimal" title="Population per flat">
+        <span class="op">=</span><span>population</span>
+      </div>
+      <div class="row">
+        <div class="name">Flats required
+          <small>3 shifts + city-support staff (shops, kindergartens, schools)</small>
+        </div>
+        <div class="val" id="flatsOut">5,500</div>
+      </div>
+      <div class="row main">
+        <div class="name">City population
+          <small>~160% of flats: children, students, non-working residents</small>
+        </div>
+        <div class="val" id="popOut">8,800</div>
+      </div>
+    </section>
+
+    <section class="block" id="waterBlock">
+      <h2 class="block-title">Water Supply</h2>
+      <div class="chain">
+        <span>population</span><span class="op">×</span>
+        <input class="coef" data-coef inputmode="decimal" title="Water per resident per day">
+        <span class="op">=</span><span>daily demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">Plant sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">Daily water demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Water treatment plants
+          <small>minimal capacity covering demand; color warns when tight</small>
+        </div>
+        <div class="val status" data-mix>—</div>
+      </div>
+      <div class="gauge-wrap">
+        <div class="gauge" role="img" aria-label="Water capacity utilization">
+          <div class="fill" data-fill></div>
+        </div>
+        <div class="gauge-legend">
+          <span>capacity <span data-cap>—</span></span>
+          <span>load <span class="util" data-util>—</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="shopBlock">
+      <h2 class="block-title">Shopping</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">÷</span>
+        <input class="coef" data-coef inputmode="decimal" title="Flats served per capacity unit">
+        <span class="op">=</span><span>demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">Shop sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">Shopping demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Shops
+          <small>build presets: many small · balanced · few large</small>
+        </div>
+      </div>
+      <div data-variants></div>
+    </section>
+
+    <section class="block" id="alcoBlock">
+      <h2 class="block-title">Alcohol</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">÷</span>
+        <input class="coef" data-coef inputmode="decimal" title="Flats served per capacity unit">
+        <span class="op">=</span><span>demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">Pub sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">Alcohol demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Pubs
+          <small>build presets: many small · balanced · few large</small>
+        </div>
+      </div>
+      <div data-variants></div>
+    </section>
+
+    <section class="block" id="sportBlock">
+      <h2 class="block-title">Sports</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">÷</span>
+        <input class="coef" data-coef inputmode="decimal" title="Flats served per capacity unit">
+        <span class="op">=</span><span>demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">Facility sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">Sports demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Sports facilities
+          <small>build presets: many small · balanced · few large</small>
+        </div>
+      </div>
+      <div data-variants></div>
+    </section>
+
+    <section class="block" id="hospBlock">
+      <h2 class="block-title">Hospital</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">÷</span>
+        <input class="coef" data-coef inputmode="decimal" title="Flats served per capacity unit">
+        <span class="op">=</span><span>demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">Hospital sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">Hospital demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Hospitals
+          <small>build presets: many small · balanced · few large</small>
+        </div>
+      </div>
+      <div data-variants></div>
+    </section>
+
+    <section class="block" id="kinderBlock">
+      <h2 class="block-title">Kindergarten</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">÷</span>
+        <input class="coef" data-coef inputmode="decimal" title="Flats served per capacity unit">
+        <span class="op">=</span><span>demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">Kindergarten sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">Kindergarten demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Kindergartens
+          <small>build presets: many small · balanced · few large</small>
+        </div>
+      </div>
+      <div data-variants></div>
+    </section>
+
+    <section class="block" id="schoolBlock">
+      <h2 class="block-title">Schools</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">÷</span>
+        <input class="coef" data-coef inputmode="decimal" title="Flats served per capacity unit">
+        <span class="op">=</span><span>demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">School sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">School demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Schools
+          <small>build presets: many small · balanced · few large</small>
+        </div>
+      </div>
+      <div data-variants></div>
+    </section>
+
+    <section class="block" id="jailBlock">
+      <h2 class="block-title">Jails</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">÷</span>
+        <input class="coef" data-coef inputmode="decimal" title="Flats served per capacity unit">
+        <span class="op">=</span><span>demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">Jail sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">Jail demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Jails
+          <small>build presets: many small · balanced · few large</small>
+        </div>
+      </div>
+      <div data-variants></div>
+    </section>
+
+    <section class="block" id="shelterBlock">
+      <h2 class="block-title">Children's Shelter</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">÷</span>
+        <input class="coef" data-coef inputmode="decimal" title="Flats served per capacity unit">
+        <span class="op">=</span><span>demand</span>
+      </div>
+      <div class="types-line" data-types>
+        <span class="lbl">Shelter sizes:</span>
+        <button class="add-type" data-add type="button">+ add size</button>
+      </div>
+      <div class="row">
+        <div class="name">Shelter demand</div>
+        <div class="val" data-demand>—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Children's shelters
+          <small>build presets: many small · balanced · few large</small>
+        </div>
+      </div>
+      <div data-variants></div>
+    </section>
+
+    <div class="stamp-zone">
+      <div class="stamp">Approved</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const workers = document.getElementById('workers');
+  const range = document.getElementById('workersRange');
+  const kFlats = document.getElementById('kFlats');
+  const kPop = document.getElementById('kPop');
+  const bandYellow = document.getElementById('bandYellow');
+  const bandRed = document.getElementById('bandRed');
+  const flatsOut = document.getElementById('flatsOut');
+  const popOut = document.getElementById('popOut');
+
+  const fmt = n => n.toLocaleString('en-US');
+
+  function parseCoef(el, fallback){
+    const v = parseFloat(String(el.value).replace(',', '.'));
+    return (isFinite(v) && v > 0) ? v : fallback;
+  }
+
+  function getBands(){
+    let y = parseCoef(bandYellow, 85) / 100;
+    let r = parseCoef(bandRed, 93) / 100;
+    if (y >= r) y = Math.max(0.01, r - 0.01);
+    return {y, r};
+  }
+
+  /* ---------- optimal mix: minimal capacity in green band ---------- */
+  function plantMix(demand, sizes, greenBelow){
+    if (demand <= 0 || sizes.length === 0) return {counts:{}, cap:0, count:0};
+    const maxSize = Math.max(...sizes);
+    let target;
+    if (greenBelow >= 1){
+      target = demand; // pure covering: minimal capacity >= demand
+    } else {
+      target = Math.ceil(demand / greenBelow);
+      if (demand / target >= greenBelow) target += 1;
+    }
+    const limit = target + maxSize;
+    const INF = Infinity;
+    const minCount = new Array(limit + 1).fill(INF);
+    const choice = new Array(limit + 1).fill(-1);
+    minCount[0] = 0;
+    for (let cap = 1; cap <= limit; cap++){
+      for (const s of sizes){
+        if (cap >= s && minCount[cap - s] + 1 < minCount[cap]){
+          minCount[cap] = minCount[cap - s] + 1;
+          choice[cap] = s;
+        }
+      }
+    }
+    let bestCap = -1;
+    for (let cap = target; cap <= limit; cap++){
+      if (minCount[cap] < INF){ bestCap = cap; break; }
+    }
+    if (bestCap < 0) return {counts:{}, cap:0, count:0};
+    const counts = {};
+    let c = bestCap;
+    while (c > 0){
+      const s = choice[c];
+      counts[s] = (counts[s] || 0) + 1;
+      c -= s;
+    }
+    return {counts, cap: bestCap, count: minCount[bestCap]};
+  }
+
+  function mixLabel(m){
+    const sizes = Object.keys(m.counts).map(Number).sort((a,b) => b-a);
+    if (!sizes.length) return '—';
+    return sizes.map(s => `${m.counts[s]} × ${s}`).join('  +  ');
+  }
+
+  function utilColor(u, bands){
+    const css = getComputedStyle(document.documentElement);
+    if (u > bands.r) return css.getPropertyValue('--danger');
+    if (u >= bands.y) return css.getPropertyValue('--warn');
+    return css.getPropertyValue('--ok');
+  }
+
+  /* ---------- supply section factory ---------- */
+  // mode 'multiply': demand = ceil(base * coef)
+  // mode 'divide':   demand = ceil(base / coef)
+  // cfg.variants: single optimal result (false) or 3 build presets (true)
+  function supplySection(rootId, cfg){
+    const root = document.getElementById(rootId);
+    const els = {
+      coef: root.querySelector('[data-coef]'),
+      types: root.querySelector('[data-types]'),
+      add: root.querySelector('[data-add]'),
+      demand: root.querySelector('[data-demand]'),
+      mix: root.querySelector('[data-mix]'),
+      cap: root.querySelector('[data-cap]'),
+      util: root.querySelector('[data-util]'),
+      fill: root.querySelector('[data-fill]'),
+      variants: root.querySelector('[data-variants]'),
+    };
+    els.coef.value = cfg.coef;
+
+    function makeChip(value){
+      const chip = document.createElement('span');
+      chip.className = 'type-chip';
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.inputMode = 'numeric';
+      inp.value = value;
+      inp.addEventListener('input', recalcAll);
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.textContent = '×';
+      del.title = 'Remove size';
+      del.addEventListener('click', () => {
+        if (els.types.querySelectorAll('.type-chip').length > 1){
+          chip.remove();
+          recalcAll();
+        }
+      });
+      chip.appendChild(inp);
+      chip.appendChild(del);
+      return chip;
+    }
+    function addChip(value){
+      els.types.insertBefore(makeChip(value), els.add);
+    }
+    els.add.addEventListener('click', () => {
+      addChip('');
+      const inputs = els.types.querySelectorAll('.type-chip input');
+      inputs[inputs.length - 1].focus();
+    });
+    cfg.sizes.forEach(addChip);
+
+    function getSizes(){
+      const sizes = [];
+      els.types.querySelectorAll('.type-chip input').forEach(inp => {
+        const v = parseInt(String(inp.value).replace(/\D/g,''), 10);
+        if (isFinite(v) && v > 0) sizes.push(v);
+      });
+      return [...new Set(sizes)].sort((a,b) => a-b);
+    }
+
+    // Green capacity target: smallest cap with demand/cap < greenBelow
+    function greenTarget(demand, greenBelow){
+      let t = Math.ceil(demand / greenBelow);
+      if (demand / t >= greenBelow) t += 1;
+      return t;
+    }
+
+    // Build presets — always homogeneous (one size per preset):
+    // many small  = smallest size, count up to the green band;
+    // balanced    = middle size, minimal count outside the red band;
+    // few large   = largest size, minimal count outside the red band.
+    function buildVariants(demand, sizes, bands){
+      if (demand <= 0 || sizes.length === 0) return [];
+      const target = greenTarget(demand, bands.y);
+      const smallest = sizes[0];
+      const middle = sizes[Math.floor((sizes.length - 1) / 2)];
+      const largest = sizes[sizes.length - 1];
+
+      function minNotRed(size){
+        let n = Math.ceil(demand / size);
+        while (demand / (n * size) > bands.r) n += 1;
+        return n;
+      }
+
+      const out = [];
+      const nS = Math.ceil(target / smallest);
+      out.push({label:'Many small', counts:{[smallest]: nS}, cap: nS * smallest});
+
+      const nM = minNotRed(middle);
+      out.push({label:'Balanced', counts:{[middle]: nM}, cap: nM * middle});
+
+      const nL = minNotRed(largest);
+      out.push({label:'Few large', counts:{[largest]: nL}, cap: nL * largest});
+
+      // dedupe identical mixes, keep order
+      const seen = new Set();
+      return out.filter(v => {
+        const key = mixLabel(v);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function renderVariants(demand, bands){
+      els.variants.innerHTML = '';
+      const list = buildVariants(demand, getSizes(), bands);
+      if (!list.length){
+        els.variants.innerHTML = '<div class="row variant"><div class="name">—</div></div>';
+        return;
+      }
+      for (const v of list){
+        const util = demand / v.cap;
+        const color = utilColor(util, bands);
+        const row = document.createElement('div');
+        row.className = 'row variant';
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.innerHTML = `${v.label} <small>cap ${fmt(v.cap)}</small>`;
+        const val = document.createElement('div');
+        val.className = 'val';
+        val.style.color = color;
+        val.innerHTML = `${mixLabel(v)}<span class="load">${Math.round(util * 100)}%</span>`;
+        row.appendChild(name);
+        row.appendChild(val);
+        els.variants.appendChild(row);
+      }
+    }
+
+    function update(base, bands){
+      const c = parseCoef(els.coef, cfg.coef);
+      const baseVal = cfg.base === 'flats' ? base.flats : base.pop;
+      const demand = cfg.mode === 'divide'
+        ? Math.ceil(baseVal / c)
+        : Math.ceil(baseVal * c);
+      els.demand.textContent = fmt(demand);
+
+      if (cfg.variants){
+        renderVariants(demand, bands);
+        return;
+      }
+
+      const mix = plantMix(demand, getSizes(), 1); // minimal covering; color signals tightness
+      els.mix.textContent = mixLabel(mix);
+      els.cap.textContent = fmt(mix.cap);
+      const util = mix.cap > 0 ? demand / mix.cap : 0;
+      els.util.textContent = Math.round(util * 100) + '%';
+      const color = utilColor(util, bands);
+      els.fill.style.width = (util * 100) + '%';
+      els.fill.style.backgroundColor = color;
+      els.mix.style.color = color;
+      els.util.style.color = color;
+    }
+
+    els.coef.addEventListener('input', recalcAll);
+
+    function getState(){
+      return {
+        coef: els.coef.value,
+        sizes: Array.from(els.types.querySelectorAll('.type-chip input')).map(i => i.value)
+      };
+    }
+    function setState(state){
+      if (!state) return;
+      if (state.coef != null) els.coef.value = state.coef;
+      if (Array.isArray(state.sizes) && state.sizes.length){
+        els.types.querySelectorAll('.type-chip').forEach(ch => ch.remove());
+        state.sizes.forEach(addChip);
+      }
+    }
+    return {update, getState, setState};
+  }
+
+  const sections = {
+    water:   supplySection('waterBlock',   {coef: 0.015, mode: 'multiply', base: 'pop',   sizes: [120, 300], variants: false}),
+    shop:    supplySection('shopBlock',    {coef: 15,    mode: 'divide',   base: 'flats', sizes: [150, 180, 405], variants: true}),
+    alco:    supplySection('alcoBlock',    {coef: 200,   mode: 'divide',   base: 'flats', sizes: [12, 60, 120], variants: true}),
+    sport:   supplySection('sportBlock',   {coef: 80,    mode: 'divide',   base: 'flats', sizes: [90, 105], variants: true}),
+    hosp:    supplySection('hospBlock',    {coef: 100,   mode: 'divide',   base: 'flats', sizes: [15, 90, 405], variants: true}),
+    kinder:  supplySection('kinderBlock',  {coef: 10,    mode: 'divide',   base: 'flats', sizes: [120, 180, 270], variants: true}),
+    school:  supplySection('schoolBlock',  {coef: 20,    mode: 'divide',   base: 'flats', sizes: [84, 156, 360, 540], variants: true}),
+    jail:    supplySection('jailBlock',    {coef: 75,    mode: 'divide',   base: 'flats', sizes: [45, 210], variants: true}),
+    shelter: supplySection('shelterBlock', {coef: 20,    mode: 'divide',   base: 'flats', sizes: [45, 160], variants: true}),
+  };
+
+  /* ---------- persistence (works when hosted; safely skipped otherwise) ---------- */
+  const STORAGE_KEY = 'wr-city-calculator';
+
+  function saveState(){
+    try {
+      const state = {
+        workers: workers.value,
+        kFlats: kFlats.value,
+        kPop: kPop.value,
+        bandYellow: bandYellow.value,
+        bandRed: bandRed.value,
+        sections: Object.fromEntries(
+          Object.entries(sections).map(([k, s]) => [k, s.getState()])
+        )
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) { /* storage unavailable — fine */ }
+  }
+
+  function restoreState(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      if (state.workers != null){ workers.value = state.workers; range.value = Math.min(state.workers, range.max); }
+      if (state.kFlats != null) kFlats.value = state.kFlats;
+      if (state.kPop != null) kPop.value = state.kPop;
+      if (state.bandYellow != null) bandYellow.value = state.bandYellow;
+      if (state.bandRed != null) bandRed.value = state.bandRed;
+      if (state.sections){
+        for (const [k, s] of Object.entries(sections)){
+          s.setState(state.sections[k]);
+        }
+      }
+    } catch (e) { /* corrupt or unavailable — use defaults */ }
+  }
+
+  /* ---------- main ---------- */
+  function recalcAll(){
+    const w = Math.max(0, parseInt(workers.value, 10) || 0);
+    const cf = parseCoef(kFlats, 5.5);
+    const cp = parseCoef(kPop, 1.6);
+    const bands = getBands();
+
+    const flats = Math.ceil(w * cf);
+    const pop = Math.round(flats * cp);
+    flatsOut.textContent = fmt(flats);
+    popOut.textContent = fmt(pop);
+
+    for (const s of Object.values(sections)){
+      s.update({pop, flats}, bands);
+    }
+    saveState();
+  }
+
+  workers.addEventListener('input', () => {
+    range.value = Math.min(workers.value || 0, range.max);
+    recalcAll();
+  });
+  range.addEventListener('input', () => {
+    workers.value = range.value;
+    recalcAll();
+  });
+  [kFlats, kPop, bandYellow, bandRed].forEach(el => el.addEventListener('input', recalcAll));
+
+  restoreState();
+  recalcAll();
+</script>
+</body>
+</html>
