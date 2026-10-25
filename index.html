@@ -204,6 +204,8 @@
     outline:none;
   }
   .type-chip input:focus{color:var(--red)}
+  .type-chip input.staff{width:34px;color:var(--ink-soft)}
+  .type-chip .chip-sep{color:var(--rule);font-size:.8rem}
   .type-chip button{
     border:none;
     background:none;
@@ -295,6 +297,20 @@
     margin-top:4px;
   }
   .gauge-legend .util{font-weight:bold}
+  .legend{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:3px 12px;
+    margin:0;
+    padding:9px 0 10px;
+    border-bottom:1px dashed var(--rule);
+    font-family:'PT Mono',monospace;
+    font-size:.75rem;
+    line-height:1.4;
+    color:var(--ink-soft);
+  }
+  .legend dt{white-space:nowrap}
+  .legend dd{margin:0}
 
   .stamp-zone{
     margin-top:26px;
@@ -343,7 +359,7 @@
         <span>Gosplan · Settlement Dept.</span>
         <span>Form No. G-1</span>
       </div>
-      <h1>City Calculator — W&amp;R: Soviet Republic</h1>
+      <h1>City Calculator <span class="num">v1.1</span> — W&amp;R: Soviet Republic</h1>
     </header>
 
     <section class="input-block">
@@ -365,11 +381,17 @@
     <section class="block">
       <h2 class="block-title">Housing &amp; Population</h2>
       <div class="chain">
-        <span>workplaces</span><span class="op">×</span>
+        <span>workplaces + utility staff</span><span class="op">×</span>
         <input class="coef" id="kFlats" value="5.5" inputmode="decimal" title="Flats per workplace">
         <span class="op">=</span><span>flats</span><span class="op">×</span>
         <input class="coef" id="kPop" value="1.6" inputmode="decimal" title="Population per flat">
         <span class="op">=</span><span>population</span>
+      </div>
+      <div class="row">
+        <div class="name">Total workplaces
+          <small>your input + staff of water and heating plants below</small>
+        </div>
+        <div class="val" id="totalWorkOut">1,000</div>
       </div>
       <div class="row">
         <div class="name">Flats required
@@ -393,7 +415,7 @@
         <span class="op">=</span><span>daily demand</span>
       </div>
       <div class="types-line" data-types>
-        <span class="lbl">Plant sizes:</span>
+        <span class="lbl">Plants, m³ / workers:</span>
         <button class="add-type" data-add type="button">+ add size</button>
       </div>
       <div class="row">
@@ -413,6 +435,48 @@
         <div class="gauge-legend">
           <span>capacity <span data-cap>—</span></span>
           <span>load <span class="util" data-util>—</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="heatBlock">
+      <h2 class="block-title">Heating</h2>
+      <div class="chain">
+        <span>flats</span><span class="op">×</span>
+        <input class="coef" id="kTank" value="0.068" inputmode="decimal" title="Hot water tank m³ per flat">
+        <span class="op">×</span>
+        <span>(1 + services <input class="coef" id="kServ" value="20" inputmode="numeric" title="Extra tank volume of service buildings, %"> %)</span>
+        <span class="op">÷</span>
+        <span>0.85<sup><input class="coef band" id="kDist" value="2" inputmode="decimal" title="Pipe distance from plant, km (underground)"></sup> km</span>
+      </div>
+      <div class="types-line" id="heatTypes">
+        <span class="lbl">Plants, tank m³ / workers:</span>
+        <button class="add-type" id="heatAdd" type="button">+ add size</button>
+      </div>
+      <dl class="legend">
+        <dt>0.068</dt><dd>hot water tank, m³ per flat — measured on prefab blocks and khrushchyovkas; check a few of your own buildings' heating dial</dd>
+        <dt>services %</dt><dd>extra tank volume of schools, shops, hospitals and other services on the same network — your calibration knob</dd>
+        <dt>km</dt><dd>pipe distance from the plant; underground pipes lose ~15% per km</dd>
+      </dl>
+      <div class="row">
+        <div class="name">Heated tank volume
+          <small>after pipe losses, underground pipes</small>
+        </div>
+        <div class="val" id="heatDemandOut">—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Heating plants
+          <small>minimal tank capacity covering demand; color warns when tight</small>
+        </div>
+        <div class="val status" id="heatPlantsOut">—</div>
+      </div>
+      <div class="gauge-wrap">
+        <div class="gauge" role="img" aria-label="Heating capacity utilization">
+          <div class="fill" id="heatFill"></div>
+        </div>
+        <div class="gauge-legend">
+          <span>capacity <span id="heatCapOut">—</span> m³</span>
+          <span>load <span class="util" id="heatUtilOut">—</span></span>
         </div>
       </div>
     </section>
@@ -601,6 +665,45 @@
       <div data-variants></div>
     </section>
 
+    <section class="block standalone" id="busBlock">
+      <h2 class="block-title">Bus Line Calculator <span class="tag">separate form</span></h2>
+      <div class="types-line">
+        <span class="lbl">This site:</span>
+        <span>workplaces <input class="coef wide" id="busJobs" value="500" inputmode="numeric" title="Workplaces served by this line"></span>
+        <span class="op">·</span>
+        <span>round trip <input class="coef" id="tripT" value="195" inputmode="numeric" title="Full round trip, real seconds"> s</span>
+        <span class="op">·</span>
+        <span>capacity <input class="coef" id="busCap" value="80" inputmode="numeric" title="Seats per vehicle"></span>
+      </div>
+      <div class="chain">
+        <span class="const-def">K</span><span class="op">=</span>
+        <span>day 60 s</span><span class="op">÷</span><span>flow 0.2</span>
+        <span class="op">=</span><span class="const-def">300</span>
+      </div>
+      <div class="chain">
+        <span>N</span><span class="op">=</span>
+        <span>workplaces × round trip</span>
+        <span class="op">÷</span>
+        <span>(<span class="const-def">K</span> × capacity)</span>
+      </div>
+      <div class="row">
+        <div class="name">Workers to deliver
+          <small>per game day, across all shifts</small>
+        </div>
+        <div class="val" id="flowOut">—</div>
+      </div>
+      <div class="row main">
+        <div class="name">Buses required</div>
+        <div class="val status" id="busOut">—</div>
+      </div>
+      <div class="row">
+        <div class="name">Headway
+          <small>workers leave after 60 game min ≈ 20 s — stay well under</small>
+        </div>
+        <div class="val status" id="headOut">—</div>
+      </div>
+    </section>
+
     <div class="stamp-zone">
       <div class="stamp">Approved</div>
     </div>
@@ -614,6 +717,7 @@
   const kPop = document.getElementById('kPop');
   const bandYellow = document.getElementById('bandYellow');
   const bandRed = document.getElementById('bandRed');
+  const totalWorkOut = document.getElementById('totalWorkOut');
   const flatsOut = document.getElementById('flatsOut');
   const popOut = document.getElementById('popOut');
 
@@ -683,6 +787,97 @@
     return css.getPropertyValue('--ok');
   }
 
+  /* ---------- editable building sizes (optionally with staff) ---------- */
+  // dual=true → each chip holds two values: capacity / workers per building.
+  // fallbackStaff restores staff for sizes saved before staff was editable.
+  function chipList(typesEl, addBtn, initial, dual, fallbackStaff){
+    const num = v => parseInt(String(v).replace(/\D/g,''), 10);
+
+    function makeChip(cap, staff){
+      const chip = document.createElement('span');
+      chip.className = 'type-chip';
+      const capIn = document.createElement('input');
+      capIn.type = 'text';
+      capIn.inputMode = 'numeric';
+      capIn.className = 'cap';
+      capIn.value = cap != null ? cap : '';
+      capIn.title = 'Capacity';
+      capIn.addEventListener('input', recalcAll);
+      chip.appendChild(capIn);
+      if (dual){
+        const sep = document.createElement('span');
+        sep.className = 'chip-sep';
+        sep.textContent = '/';
+        const stIn = document.createElement('input');
+        stIn.type = 'text';
+        stIn.inputMode = 'numeric';
+        stIn.className = 'staff';
+        stIn.value = staff != null ? staff : '';
+        stIn.title = 'Workers per building';
+        stIn.addEventListener('input', recalcAll);
+        chip.appendChild(sep);
+        chip.appendChild(stIn);
+      }
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.textContent = '×';
+      del.title = 'Remove size';
+      del.addEventListener('click', () => {
+        if (typesEl.querySelectorAll('.type-chip').length > 1){
+          chip.remove();
+          recalcAll();
+        }
+      });
+      chip.appendChild(del);
+      return chip;
+    }
+    function add(item){
+      const cap = item && typeof item === 'object' ? item.cap : item;
+      let staff = item && typeof item === 'object' ? item.staff : undefined;
+      if (dual && (staff == null || staff === '') && fallbackStaff) staff = fallbackStaff[num(cap)];
+      typesEl.insertBefore(makeChip(cap, staff), addBtn);
+    }
+    addBtn.addEventListener('click', () => {
+      add({cap:'', staff:''});
+      const caps = typesEl.querySelectorAll('.type-chip input.cap');
+      caps[caps.length - 1].focus();
+    });
+    initial.forEach(add);
+
+    function getSizes(){
+      const sizes = [];
+      typesEl.querySelectorAll('.type-chip input.cap').forEach(inp => {
+        const v = num(inp.value);
+        if (isFinite(v) && v > 0) sizes.push(v);
+      });
+      return [...new Set(sizes)].sort((a,b) => a-b);
+    }
+    function getStaffMap(){
+      const map = {};
+      typesEl.querySelectorAll('.type-chip').forEach(chip => {
+        const cap = num(chip.querySelector('input.cap').value);
+        const stEl = chip.querySelector('input.staff');
+        if (!isFinite(cap) || cap <= 0 || !stEl) return;
+        const st = num(stEl.value);
+        map[cap] = isFinite(st) && st > 0 ? st : 0;
+      });
+      return map;
+    }
+    function getState(){
+      return Array.from(typesEl.querySelectorAll('.type-chip')).map(ch => {
+        const st = ch.querySelector('input.staff');
+        return st ? {cap: ch.querySelector('input.cap').value, staff: st.value}
+                  : ch.querySelector('input.cap').value;
+      });
+    }
+    function setState(arr){
+      if (!Array.isArray(arr) || !arr.length) return;
+      typesEl.querySelectorAll('.type-chip').forEach(ch => ch.remove());
+      arr.forEach(add);
+    }
+    return {getSizes, getStaffMap, getState, setState};
+  }
+
   /* ---------- supply section factory ---------- */
   // mode 'multiply': demand = ceil(base * coef)
   // mode 'divide':   demand = ceil(base / coef)
@@ -702,46 +897,12 @@
     };
     els.coef.value = cfg.coef;
 
-    function makeChip(value){
-      const chip = document.createElement('span');
-      chip.className = 'type-chip';
-      const inp = document.createElement('input');
-      inp.type = 'text';
-      inp.inputMode = 'numeric';
-      inp.value = value;
-      inp.addEventListener('input', recalcAll);
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.textContent = '×';
-      del.title = 'Remove size';
-      del.addEventListener('click', () => {
-        if (els.types.querySelectorAll('.type-chip').length > 1){
-          chip.remove();
-          recalcAll();
-        }
-      });
-      chip.appendChild(inp);
-      chip.appendChild(del);
-      return chip;
-    }
-    function addChip(value){
-      els.types.insertBefore(makeChip(value), els.add);
-    }
-    els.add.addEventListener('click', () => {
-      addChip('');
-      const inputs = els.types.querySelectorAll('.type-chip input');
-      inputs[inputs.length - 1].focus();
-    });
-    cfg.sizes.forEach(addChip);
-
-    function getSizes(){
-      const sizes = [];
-      els.types.querySelectorAll('.type-chip input').forEach(inp => {
-        const v = parseInt(String(inp.value).replace(/\D/g,''), 10);
-        if (isFinite(v) && v > 0) sizes.push(v);
-      });
-      return [...new Set(sizes)].sort((a,b) => a-b);
-    }
+    const chips = chipList(
+      els.types, els.add,
+      cfg.staff ? cfg.sizes.map(sz => ({cap: sz, staff: cfg.staff[sz]})) : cfg.sizes,
+      !!cfg.staff, cfg.staff
+    );
+    const getSizes = chips.getSizes;
 
     // Green capacity target: smallest cap with demand/cap < greenBelow
     function greenTarget(demand, greenBelow){
@@ -822,7 +983,7 @@
 
       if (cfg.variants){
         renderVariants(demand, bands);
-        return;
+        return 0;
       }
 
       const mix = plantMix(demand, getSizes(), 1); // minimal covering; color signals tightness
@@ -835,6 +996,16 @@
       els.fill.style.backgroundColor = color;
       els.mix.style.color = color;
       els.util.style.color = color;
+
+      // staff employed by this section's own buildings (fixed per building size)
+      let staff = 0;
+      if (cfg.staff){
+        const map = chips.getStaffMap();
+        for (const [size, count] of Object.entries(mix.counts)){
+          staff += (map[size] || 0) * count;
+        }
+      }
+      return staff;
     }
 
     els.coef.addEventListener('input', recalcAll);
@@ -842,22 +1013,19 @@
     function getState(){
       return {
         coef: els.coef.value,
-        sizes: Array.from(els.types.querySelectorAll('.type-chip input')).map(i => i.value)
+        sizes: chips.getState()
       };
     }
     function setState(state){
       if (!state) return;
       if (state.coef != null) els.coef.value = state.coef;
-      if (Array.isArray(state.sizes) && state.sizes.length){
-        els.types.querySelectorAll('.type-chip').forEach(ch => ch.remove());
-        state.sizes.forEach(addChip);
-      }
+      chips.setState(state.sizes);
     }
     return {update, getState, setState};
   }
 
   const sections = {
-    water:   supplySection('waterBlock',   {coef: 0.015, mode: 'multiply', base: 'pop',   sizes: [120, 300], variants: false}),
+    water:   supplySection('waterBlock',   {coef: 0.015, mode: 'multiply', base: 'pop',   sizes: [120, 300], staff: {120: 15, 300: 30}, variants: false}),
     shop:    supplySection('shopBlock',    {coef: 15,    mode: 'divide',   base: 'flats', sizes: [150, 180, 405], variants: true}),
     alco:    supplySection('alcoBlock',    {coef: 200,   mode: 'divide',   base: 'flats', sizes: [12, 60, 120], variants: true}),
     sport:   supplySection('sportBlock',   {coef: 80,    mode: 'divide',   base: 'flats', sizes: [90, 105], variants: true}),
@@ -879,6 +1047,8 @@
         kPop: kPop.value,
         bandYellow: bandYellow.value,
         bandRed: bandRed.value,
+        heating: {tank: kTank.value, serv: kServ.value, dist: kDist.value, sizes: heatChips.getState()},
+        transport: {jobs: busJobs.value, trip: tripT.value, cap: busCap.value},
         sections: Object.fromEntries(
           Object.entries(sections).map(([k, s]) => [k, s.getState()])
         )
@@ -897,6 +1067,17 @@
       if (state.kPop != null) kPop.value = state.kPop;
       if (state.bandYellow != null) bandYellow.value = state.bandYellow;
       if (state.bandRed != null) bandRed.value = state.bandRed;
+      if (state.heating){
+        if (state.heating.tank != null) kTank.value = state.heating.tank;
+        if (state.heating.serv != null) kServ.value = state.heating.serv;
+        if (state.heating.dist != null) kDist.value = state.heating.dist;
+        heatChips.setState(state.heating.sizes);
+      }
+      if (state.transport){
+        if (state.transport.jobs != null) busJobs.value = state.transport.jobs;
+        if (state.transport.trip != null) tripT.value = state.transport.trip;
+        if (state.transport.cap != null) busCap.value = state.transport.cap;
+      }
       if (state.sections){
         for (const [k, s] of Object.entries(sections)){
           s.setState(state.sections[k]);
@@ -905,21 +1086,118 @@
     } catch (e) { /* corrupt or unavailable — use defaults */ }
   }
 
+  /* ---------- worker transport ---------- */
+  const busJobs = document.getElementById('busJobs');
+  const tripT = document.getElementById('tripT');
+  const busCap = document.getElementById('busCap');
+  const flowOut = document.getElementById('flowOut');
+  const busOut = document.getElementById('busOut');
+  const headOut = document.getElementById('headOut');
+
+  const MAX_WAIT_S = 20;  // 60 game minutes of worker patience, in real seconds
+  const DAY_S = 60;       // a calendar day is 60 real seconds
+  const BUS_K = 300;      // day ÷ flow coefficient (60 / 0.2), calibrated on real routes
+
+  function updateTransport(){
+    const bands = getBands();
+    const jobs = Math.max(0, parseInt(busJobs.value, 10) || 0);
+    const T = parseCoef(tripT, 195);
+    const C = parseCoef(busCap, 80);
+
+    const flow = Math.round(jobs * DAY_S / BUS_K);
+    flowOut.textContent = fmt(flow);
+
+    // N = workplaces × round trip ÷ (167 × capacity)
+    const nRaw = (jobs * T) / (BUS_K * C);
+    const buses = nRaw;
+    busOut.textContent = nRaw > 0 ? nRaw.toFixed(2) : '—';
+
+    const headway = buses > 0 ? T / buses : 0;
+    headOut.textContent = buses > 0 ? headway.toFixed(1) + ' s' : '—';
+
+    // headway close to the patience limit is the danger, same band logic
+    const load = buses > 0 ? headway / MAX_WAIT_S : 0;
+    const color = utilColor(load, bands);
+    busOut.style.color = color;
+    headOut.style.color = color;
+  }
+
+  /* ---------- heating (large plant only) ---------- */
+  const kTank = document.getElementById('kTank');
+  const kServ = document.getElementById('kServ');
+  const kDist = document.getElementById('kDist');
+  const heatDemandOut = document.getElementById('heatDemandOut');
+  const heatPlantsOut = document.getElementById('heatPlantsOut');
+  const heatCapOut = document.getElementById('heatCapOut');
+  const heatUtilOut = document.getElementById('heatUtilOut');
+  const heatFill = document.getElementById('heatFill');
+
+  const heatChips = chipList(
+    document.getElementById('heatTypes'),
+    document.getElementById('heatAdd'),
+    [{cap: 1050, staff: 30}], true, {1050: 30}
+  );
+  const PIPE_LOSS = 0.85;  // per km, underground pipes
+
+  // Same approach as water: minimal number of plants covering demand,
+  // colour warns when tight. Returns the plants' staff.
+  function updateHeating(flats, bands){
+    const tank = parseCoef(kTank, 0.068);
+    const serv = Math.max(0, parseFloat(String(kServ.value).replace(',', '.')) || 0) / 100;
+    const km = Math.max(0, parseFloat(String(kDist.value).replace(',', '.')) || 0);
+
+    const volume = flats * tank * (1 + serv) / Math.pow(PIPE_LOSS, km);
+    const need = Math.ceil(volume);
+    heatDemandOut.textContent = fmt(need) + ' m³';
+
+    const mix = plantMix(need, heatChips.getSizes(), 1);
+    const cap = mix.cap;
+    heatPlantsOut.textContent = mixLabel(mix);
+    heatCapOut.textContent = fmt(cap);
+
+    const util = cap > 0 ? need / cap : 0;
+    heatUtilOut.textContent = Math.round(util * 100) + '%';
+    const color = utilColor(util, bands);
+    heatFill.style.width = (util * 100) + '%';
+    heatFill.style.backgroundColor = color;
+    heatPlantsOut.style.color = color;
+    heatUtilOut.style.color = color;
+
+    const staffMap = heatChips.getStaffMap();
+    let staff = 0;
+    for (const [size, count] of Object.entries(mix.counts)){
+      staff += (staffMap[size] || 0) * count;
+    }
+    return staff;
+  }
+
   /* ---------- main ---------- */
+  // Utility staff are workplaces too: their buildings add jobs, which add flats,
+  // which add population, which can add buildings. Iterate to a fixed point.
   function recalcAll(){
-    const w = Math.max(0, parseInt(workers.value, 10) || 0);
+    const base = Math.max(0, parseInt(workers.value, 10) || 0);
     const cf = parseCoef(kFlats, 5.5);
     const cp = parseCoef(kPop, 1.6);
     const bands = getBands();
 
-    const flats = Math.ceil(w * cf);
-    const pop = Math.round(flats * cp);
+    let total = base, flats = 0, pop = 0, staff = 0;
+    for (let i = 0; i < 12; i++){
+      flats = Math.ceil(total * cf);
+      pop = Math.round(flats * cp);
+      let s = 0;
+      for (const sec of Object.values(sections)){
+        s += sec.update({pop, flats}, bands) || 0;
+      }
+      s += updateHeating(flats, bands);
+      const next = base + s;
+      if (next === total){ staff = s; break; }
+      total = next;
+      staff = s;
+    }
+
+    totalWorkOut.textContent = fmt(total);
     flatsOut.textContent = fmt(flats);
     popOut.textContent = fmt(pop);
-
-    for (const s of Object.values(sections)){
-      s.update({pop, flats}, bands);
-    }
     saveState();
   }
 
@@ -931,10 +1209,13 @@
     workers.value = range.value;
     recalcAll();
   });
-  [kFlats, kPop, bandYellow, bandRed].forEach(el => el.addEventListener('input', recalcAll));
+  [kFlats, kPop, bandYellow, bandRed, kTank, kServ, kDist].forEach(el => el.addEventListener('input', recalcAll));
+  [busJobs, tripT, busCap].forEach(el => el.addEventListener('input', () => { updateTransport(); saveState(); }));
+  [bandYellow, bandRed].forEach(el => el.addEventListener('input', updateTransport));
 
   restoreState();
   recalcAll();
+  updateTransport();
 </script>
 </body>
 </html>
